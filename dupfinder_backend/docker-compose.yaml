@@ -1,0 +1,61 @@
+version: '3'
+services:
+### elasticsearch
+  elasticsearch:
+    container_name: elasticsearch_dev
+    image: elasticsearch:8.5.3
+    ports:
+      - '9200:9200'
+      - '9300:9300'
+    restart: always
+    environment:
+      - 'cluster.name=elasticsearch' #设置集群名称为elasticsearch
+      - 'discovery.type=single-node' #以单一节点模式启动
+      - 'ES_JAVA_OPTS=-Xms1024m -Xmx1024m' #设置使用jvm内存大小
+    networks:
+      - my_net_dev
+    volumes:
+      - /usr/local/data-docker/elasticsearch/logs:/usr/share/elasticsearch/logs
+      - /usr/local/data-docker/elasticsearch/data:/usr/share/elasticsearch/data
+      - /usr/local/data-docker/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+      - /usr/local/data-docker/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+
+  ### kibana
+  kibana:
+    container_name: kibana_dev
+    image: kibana:8.5.3
+    restart: always
+    volumes:
+      - /usr/local/data-docker/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - 5601:5601
+    links:
+      - elasticsearch:es #可以用es这个域名访问elasticsearch服务
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200 #设置访问elasticsearch的地址
+      - 'elasticsearch.hosts=http://elasticsearch:9200' #设置访问elasticsearch的地址
+      - I18N_LOCALE=zh-CN
+    networks:
+      - my_net_dev
+    depends_on:
+      - elasticsearch
+
+
+  ### mysql
+  mysql:
+    container_name: mysql_dev
+    image: mysql:8.0.28
+    ports:
+      - 3307:3306
+    networks:
+      - my_net_dev
+    # docker安全验证
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=cluster
+
+
+networks:
+  my_net_dev: {}

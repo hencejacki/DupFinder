@@ -1,0 +1,5 @@
+
+enum ChatMessageType {
+  user,
+  bot
+}

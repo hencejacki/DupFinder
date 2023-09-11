@@ -1,0 +1,53 @@
+name: dupfinder
+description: A new Flutter project.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.0.1 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.0.5  # 状态管理
+  go_router: ^7.1.1 # 路由管理
+  fluent_ui: ^4.6.2 # Windows UI
+  system_theme: ^2.1.0 # 获取当前系统的主题信息
+  window_manager: ^0.3.4 # Flutter窗口管理
+  flutter_acrylic: ^1.1.3 # 窗口高斯模糊支持
+  url_launcher: ^6.1.11 # URL跳转浏览器
+  clipboard: ^0.1.3 # 剪切板操作
+  flutter_markdown: ^0.6.14 # MarkDown显示支持
+  flutter_syntax_view: ^4.0.0 # 代码高亮支持
+  flutter_launcher_icons: ^0.13.1 # 图标设置
+  flutter_html: ^3.0.0-beta.2 # 富文本显示
+  dio: ^5.2.0 # 网络请求
+  file_picker: ^5.3.2
+  shared_preferences: ^2.1.2
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0 # 语法检查支持
+
+flutter_launcher_icons:
+  android: false
+  ios: false
+  image_path: "assets/logo_windows.jpg"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: false
+    image_path: "assets/logo_linux.jpg"
+    background_color: "#hexcode"
+    theme_color: "#hexcode"
+  windows:
+    generate: true
+    image_path: "assets/logo_windows.jpg"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/logo_ios.jpg"
+
+flutter:
+  uses-material-design: true
