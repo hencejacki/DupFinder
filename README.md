@@ -1,5 +1,6 @@
 <div align="center">
  <image style="width:300px;height:300px" src="https://gitee.com/jackwalse/mypic/raw/master/img/logo_windows.jpg"></image> 
+</div>
 <div align="center">
 <img src="https://img.shields.io/badge/Author-hence_jacki-blue"/>    
 <img src="https://img.shields.io/github/license/hencejacki/DupFinder"/>    
