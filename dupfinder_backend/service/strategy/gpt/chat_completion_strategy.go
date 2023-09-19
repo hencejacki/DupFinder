@@ -6,10 +6,9 @@ import (
 	"dupbackend/model/session"
 	"encoding/json"
 	"errors"
-	"io"
 	"io/ioutil"
 	"log"
-	"net/url"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -18,14 +17,6 @@ type ChatCompletionStrategy struct{}
 
 // 获取聊天服务
 func (t *ChatCompletionStrategy) GoGet(prompt string, idx int16) (string, error) {
-	u, ok := url.Parse(constant.GPT_CC_URL)
-	if ok != nil {
-		log.Println("[Error ChatCompletion]: error parse url from ", constant.GPT_TC_URL)
-		return "", ok
-	}
-
-	global.GVA_GPT_REQUEST.URL = u
-
 	// 获取会话信息
 	sErr := global.GVA_GPT_SESSION.SelectSession(idx)
 	if sErr != nil {
@@ -45,32 +36,43 @@ func (t *ChatCompletionStrategy) GoGet(prompt string, idx int16) (string, error)
 	currentSession.Messages = append(currentSession.Messages, userMessage, botMessage)
 	currentSession.LastUpdate = time.Now().Unix()
 
-	// 更新会话
-	global.GVA_GPT_SESSION.UpdateSession(&currentSession)
-
 	// 构造请求体
-	req := map[string]interface{}{
+	var messages []session.Messages
+	for _, v := range currentSession.Messages {
+		messages = append(messages, session.Messages{
+			Content: v.Content,
+			Role:    v.Role,
+		})
+	}
+	reqBody := map[string]interface{}{
 		"model":             "gpt-3.5-turbo",
-		"message":           currentSession.Messages,
+		"messages":          messages,
 		"temperature":       0.5,
 		"presence_penalty":  0,
 		"frequency_penalty": 0,
 		"top_p":             1,
 	}
 
-	log.Println("[GPT Request]: ", req)
-
 	// 序列化请求
-	reqJson, err := json.Marshal(req)
+	reqJson, err := json.Marshal(reqBody)
 	if err != nil {
 		log.Println("[Error serialize request body]: ", err.Error())
 		return "", err
 	}
-	global.GVA_GPT_REQUEST.Body = io.NopCloser(strings.NewReader(string(reqJson)))
-	defer global.GVA_GPT_REQUEST.Body.Close()
+
+	// 创建Request
+	req, err := http.NewRequest("POST", constant.GPT_CC_URL, strings.NewReader(string(reqJson)))
+	if err != nil {
+		log.Println("[Error create request]: ", err.Error())
+		return "", err
+	}
+
+	// 设置头部
+	req.Header.Set("Authorization", constant.GPT_API_KEY)
+	req.Header.Set("Content-Type", "application/json")
 
 	// 请求API
-	resp, ok := global.GVA_HTTP_CLIENT.Do(global.GVA_GPT_REQUEST)
+	resp, ok := global.GVA_HTTP_CLIENT.Do(req)
 	if ok != nil {
 		log.Println("[Error request API]: ", ok.Error())
 		return "", ok
@@ -84,6 +86,7 @@ func (t *ChatCompletionStrategy) GoGet(prompt string, idx int16) (string, error)
 		log.Println("[Error read response body]: ", err.Error())
 		return "", err
 	}
+
 	// 反序列化
 	if deserializeErr := json.Unmarshal(body, &resMap); deserializeErr != nil {
 		log.Println("[Error deserialize response body]: ", deserializeErr.Error())
@@ -99,7 +102,49 @@ func (t *ChatCompletionStrategy) GoGet(prompt string, idx int16) (string, error)
 	log.Println("[GPT Response]: ", responseMsg)
 
 	// 前文botMessage内容更新
-	botMessage.Message = responseMsg
+	currentSession.Messages[len(currentSession.Messages)-1].Content = responseMsg
+	// 更新会话
+	global.GVA_GPT_SESSION.UpdateSession(&currentSession)
 
 	return responseMsg, nil
 }
+
+/*
+standard format:
+{
+    "messages": [
+        {
+            "role": "system",
+            "content": "\nYou are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2021-09\nCurrent model: gpt-3.5-turbo\nCurrent time: 2023/9/9 15:41:11\n"
+        },
+        {
+            "role": "user",
+            "content": "指针和引用区别是什么"
+        }
+    ],
+    "model": "gpt-3.5-turbo",
+    "temperature": 0.5,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "top_p": 1
+}
+
+construct format style:
+{
+    "frequency_penalty": 0,
+    "messages": [
+        {
+            "content": "你好",
+            "role": "user"
+        },
+        {
+            "content": "",
+            "role": "assistant"
+        }
+    ],
+    "model": "gpt-3.5-turbo",
+    "presence_penalty": 0,
+    "temperature": 0.5,
+    "top_p": 1
+}
+*/

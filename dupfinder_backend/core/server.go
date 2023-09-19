@@ -61,6 +61,9 @@ func RunServer() {
 	// 初始化HTTP Client
 	global.GVA_HTTP_CLIENT = &http.Client{}
 
+	// 初始化HTTP Request
+	global.GVA_GPT_REQUEST = &http.Request{}
+
 	// 初始化GPT请求
 	initialize.InitGPT()
 

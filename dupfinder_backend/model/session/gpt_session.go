@@ -8,9 +8,15 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 )
 
+// API Use
+type Messages struct {
+	Content string `json:"content"` // 消息
+	Role    string `json:"role"`    // 消息日期
+}
+
 type ChatMessage struct {
 	Id      string // 消息ID
-	Message string // 消息
+	Content string // 消息
 	Date    string // 消息日期
 	Role    string // 角色
 }
@@ -45,8 +51,8 @@ func CreateNewMessage(message string, role string) ChatMessage {
 	}
 	return ChatMessage{
 		Id:      u.String(),
-		Message: message,
-		Date:    time.Now().Format("yyyy-MM-dd HH:mm:ss"),
+		Content: message,
+		Date:    time.Now().Format("2006-01-02 15:04:05"),
 		Role:    role,
 	}
 }
