@@ -1,10 +1,19 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:dupfinder/constant/global_constant.dart';
+import 'package:dupfinder/http/request.dart';
 import 'package:dupfinder/model/gpt_model.dart';
+import 'package:dupfinder/model/request/gpt_request.dart';
+import 'package:dupfinder/model/response/gpt_response.dart';
 import 'package:dupfinder/widgets/chat_message.dart';
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../model/response/base_response.dart';
 
 /// GPT问答界面
 
@@ -25,41 +34,30 @@ class _QAGptPage extends State<QAGptPage> {
   final TextEditingController _textEditingController = TextEditingController();
 
   @override
-  void initState() {
-    // double savedScrollPosition =
-    //     widget.preferences.getDouble("QA-scrollPosition") ?? -1.0;
-    // if (savedScrollPosition > 0) {
-    //   print("savedScrollPosition: $savedScrollPosition");
-    //   _scrollController.jumpTo(savedScrollPosition);
-    // }
-    _scrollController.addListener(() {
-      print("1!5!");
-      // 保存当前位置到本地
-      widget.preferences
-          .setDouble("QA-scrollPosition", _scrollController.position.pixels);
-    });
-    super.initState();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // double savedScrollPosition =
-    //     widget.preferences.getDouble("QA-scrollPosition") ?? -1.0;
-    // if (savedScrollPosition > 0) {
-    //   print("savedScrollPosition: $savedScrollPosition");
-    //   if (_scrollController.hasClients) {
-    //     print("Jumping");
-    //     _scrollController.jumpTo(savedScrollPosition);
-    //   }
-    // }
-  }
-
-  @override
   void dispose() {
-    // 释放资源
     _scrollController.dispose();
+    _textEditingController.dispose();
     super.dispose();
+  }
+
+  /// Get Response from backend
+  Future<String> getResponse(String prompt) async {
+    GPTRequest req = GPTRequest(prompt: prompt);
+
+    try {
+      Response? res = await httpInstance?.post("/GPT",
+          data: FormData.fromMap(req.toJson()));
+
+      Map<String, dynamic> result = jsonDecode(res.toString());
+      BaseResponse baseResponse = BaseResponse.fromJson(result);
+
+      GPTResponse gptResponse =
+          GPTResponse.fromJson(baseResponse.serializeData);
+
+      return gptResponse.reply ?? "";
+    } on DioException {
+      return "";
+    }
   }
 
   @override
@@ -84,18 +82,28 @@ class _QAGptPage extends State<QAGptPage> {
             ),
           ),
           Expanded(
+            flex: 7,
+            child: ListView.builder(
+              controller: _scrollController,
+              itemCount: gptModel.messages.length,
+              itemBuilder: (context, index) {
+                // if (kDebugMode) {
+                //   print(gptModel.messages[index].isFinished);
+                //   print("isPlayed?: ${gptModel.messages[index].isPlayed}");
+                // }
+                gptModel.messages[index] = ChatMessage(
+                  text: gptModel.messages[index].text,
+                  chatMessageType: gptModel.messages[index].chatMessageType,
+                  isFinished: gptModel.messages[index].isFinished,
+                  isPlayed: gptModel.messages[index].isPlayed,
+                );
+                return gptModel.messages[index];
+              },
+            ),
+          ),
+          Expanded(
             child: Stack(
               children: [
-                ListView.builder(
-                  controller: _scrollController,
-                  itemCount: gptModel.messages.length,
-                  itemBuilder: (context, index) {
-                    var message = gptModel.messages[index];
-                    return ChatMessage(
-                        text: message.text,
-                        chatMessageType: message.chatMessageType);
-                  },
-                ),
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
@@ -132,25 +140,48 @@ class _QAGptPage extends State<QAGptPage> {
                                       hintText: "Send a message",
                                     ),
                                     onSubmitted: (v) {
+                                      List<ChatMessage> newMessages = [
+                                        ChatMessage(
+                                          text: v,
+                                          chatMessageType: ChatMessageType.user,
+                                          isPlayed: true,
+                                        ),
+                                        ChatMessage(
+                                          key: UniqueKey(),
+                                          text: "",
+                                          chatMessageType: ChatMessageType.bot,
+                                          isFinished: false,
+                                        )
+                                      ];
                                       setState(() {
-                                        gptModel.messages.addAll([
-                                          ChatMessage(
-                                              text: v,
-                                              chatMessageType:
-                                                  ChatMessageType.user),
-                                          const ChatMessage(
-                                              text:
-                                                  "是的,Android可以被归类为嵌入式系统的一种。嵌入式系统是指被嵌入到其他设备或系统中的计算机系统,通常用于特定的任务或功能。Android是一个开放源代码的移动操作系统,广泛应用于智能手机、平板电脑和其他移动设备中。它被设计用于在资源有限的嵌入式环境中运行,并提供了丰富的功能和开发工具,以支持移动应用程序的开发和执行。由于Android在嵌入式系统中的应用范围广泛,并且与硬件密切相关,因此它可以被认为是一种嵌入式系统。",
-                                              chatMessageType:
-                                                  ChatMessageType.bot)
-                                        ]);
+                                        gptModel.messages.addAll(newMessages);
                                       });
+
+                                      // 请求API
+                                      getResponse(v).then(
+                                        (value) {
+                                          if (value.isNotEmpty) {
+                                            setState(() {
+                                              gptModel.messages.last.text =
+                                                  value;
+                                              gptModel.messages.last
+                                                  .isFinished = true;
+                                            });
+                                          } else {
+                                            gptModel.messages.last.text =
+                                                "网络出现错误!";
+                                            gptModel.messages.last.isFinished =
+                                                true;
+                                          }
+                                        },
+                                      );
+
                                       _textEditingController.clear();
                                       _scrollController.animateTo(
                                           _scrollController
-                                              .position.maxScrollExtent,
-                                          duration:
-                                              const Duration(milliseconds: 300),
+                                                  .position.maxScrollExtent *
+                                              10,
+                                          duration: const Duration(seconds: 3),
                                           curve: Curves.easeOut);
                                     },
                                   ),
@@ -159,6 +190,17 @@ class _QAGptPage extends State<QAGptPage> {
                                   onPressed: () {},
                                   icon: const Icon(
                                     Icons.send_rounded,
+                                    size: 20,
+                                  ),
+                                ),
+                                fluent.IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      gptModel.messages.clear();
+                                    });
+                                  },
+                                  icon: const Icon(
+                                    Icons.cleaning_services_rounded,
                                     size: 20,
                                   ),
                                 )

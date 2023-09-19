@@ -208,7 +208,7 @@ class _MyHomePageState extends State<MyHomePage> with WindowListener {
     _LinkPaneItemAction(
       icon: const Icon(FluentIcons.open_source),
       title: const Text('Source code'),
-      link: 'https://github.com/Mr-Jacks520',
+      link: 'https://github.com/hencejacki',
       body: const SizedBox.shrink(),
     ),
   ];

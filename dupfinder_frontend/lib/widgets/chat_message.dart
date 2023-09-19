@@ -1,7 +1,7 @@
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:dupfinder/constant/global_constant.dart';
-import 'package:dupfinder/theme.dart';
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 
 const userEndBackgroundColor = Color.fromARGB(122, 52, 53, 65);
 const botEndBackgroundColor = Color.fromARGB(122, 68, 70, 84);
@@ -9,12 +9,19 @@ const botEndBackgroundColor = Color.fromARGB(122, 68, 70, 84);
 const userStartBackgroundColor = Color.fromARGB(151, 253, 253, 253);
 const botStartBackgroundColor = Color.fromARGB(164, 243, 243, 243);
 
+// ignore: must_be_immutable
 class ChatMessage extends StatefulWidget {
-  const ChatMessage(
-      {super.key, required this.text, required this.chatMessageType});
+  ChatMessage(
+      {super.key,
+      required this.text,
+      required this.chatMessageType,
+      this.isFinished = true,
+      this.isPlayed = false});
 
-  final String text;
+  String text;
   final ChatMessageType chatMessageType;
+  bool isFinished;
+  bool isPlayed;
 
   @override
   State<StatefulWidget> createState() => ChatMessageState();
@@ -54,15 +61,6 @@ class ChatMessageState extends State<ChatMessage>
     _currentUserColor = !FluentTheme.of(context).brightness.isLight
         ? userEndBackgroundColor
         : userStartBackgroundColor;
-    // 改变颜色
-    context.watch<AppTheme>().addListener(() {
-      _currentBotColor = FluentTheme.of(context).brightness.isLight
-          ? botEndBackgroundColor
-          : botStartBackgroundColor;
-      _currentUserColor = FluentTheme.of(context).brightness.isLight
-          ? userEndBackgroundColor
-          : userStartBackgroundColor;
-    });
 
     return AnimatedBuilder(
       animation: _animationController,
@@ -100,12 +98,31 @@ class ChatMessageState extends State<ChatMessage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(8.0),
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                ),
-                child: Text(widget.text),
-              )
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                  ),
+                  child: widget.chatMessageType == ChatMessageType.bot
+                      ? widget.isPlayed
+                          ? Text(widget.text)
+                          : widget.isFinished
+                              ? AnimatedTextKit(
+                                  key: UniqueKey(),
+                                  animatedTexts: [
+                                    TyperAnimatedText(widget.text)
+                                  ],
+                                  totalRepeatCount: 1,
+                                  isRepeatingAnimation: false,
+                                  onFinished: () => setState(() {
+                                    widget.isPlayed = true;
+                                  }),
+                                )
+                              : AnimatedTextKit(
+                                  key: UniqueKey(),
+                                  animatedTexts: [WavyAnimatedText(".....")],
+                                  isRepeatingAnimation: true,
+                                )
+                      : Text(widget.text))
             ],
           ))
         ],

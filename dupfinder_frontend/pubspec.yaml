@@ -22,8 +22,9 @@ dependencies:
   flutter_launcher_icons: ^0.13.1 # 图标设置
   flutter_html: ^3.0.0-beta.2 # 富文本显示
   dio: ^5.2.0 # 网络请求
-  file_picker: ^5.3.2
-  shared_preferences: ^2.1.2
+  file_picker: ^5.3.2 # 文件选取
+  shared_preferences: ^2.1.2  # 本地持久化
+  animated_text_kit: ^4.2.2 # 文本动画
 
 
 dev_dependencies:
